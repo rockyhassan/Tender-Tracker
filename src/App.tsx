@@ -12,7 +12,7 @@ import { AuthoritiesPage, DocumentPanel } from "./Authorities";
 import { BulkTenderEntry, NewIssueBatchWithTenders, type BulkTenderDraft, type NewBatchDraft } from "./BulkTenderEntry";
 import { SecurityRegistersPage } from "./SecurityRegisters";
 
-const nav = [{ label: "Dashboard", icon: LayoutDashboard }, { label: "Tenders", icon: ClipboardList }, { label: "Pay Orders", icon: WalletCards }, { label: "Performance Security", icon: ShieldCheck }, { label: "Issue Batches", icon: Archive }, { label: "Purchase Sheets", icon: WalletCards }, { label: "Companies", icon: Building2 }, { label: "Authorities", icon: Building2 }, { label: "Reports", icon: FileBarChart }];
+const nav = [{ label: "Dashboard", icon: LayoutDashboard }, { label: "Issue Batches", icon: Archive }, { label: "Purchase Sheets", icon: WalletCards }, { label: "Tenders", icon: ClipboardList }, { label: "Pay Orders", icon: WalletCards }, { label: "Performance Security", icon: ShieldCheck }, { label: "Companies", icon: Building2 }, { label: "Authorities", icon: Building2 }, { label: "Reports", icon: FileBarChart }];
 const money = (value: number | null | undefined) => value == null ? "—" : `BDT ${new Intl.NumberFormat("en-BD", { maximumFractionDigits: 0, useGrouping: true }).format(Number.isFinite(value) ? value : 0)}`;
 const dateOnly = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-BD", { day: "2-digit", month: "short", year: "numeric" }).format(date); };
 const dateTime = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("en-BD", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }).format(date); };
