@@ -52,6 +52,7 @@ export class TenderService {
     return await this.repository.create({
       ...(input.clientId ? { id: input.clientId } : {}),
       tenderId: input.tenderId,
+      referenceNo: input.referenceNo,
       company: input.company ?? "",
       companyId: input.companyId,
       authority: input.authority,

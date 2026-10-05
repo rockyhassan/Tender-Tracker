@@ -62,6 +62,7 @@ export const issueBatches = sqliteTable("issue_batches", {
 export const tenders = sqliteTable("tenders", {
   id: text("id").primaryKey(),
   tenderId: text("tender_id").notNull(),
+  referenceNo: text("reference_no"),
   companyId: text("company_id").references(() => companies.id),
   issueBatchId: text("issue_batch_id").references(() => issueBatches.id),
   authority: text("authority").notNull(),

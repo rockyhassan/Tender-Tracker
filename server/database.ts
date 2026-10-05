@@ -88,6 +88,7 @@ const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS tenders (
     id TEXT PRIMARY KEY,
     tender_id TEXT NOT NULL,
+    reference_no TEXT,
     company_id TEXT REFERENCES companies(id),
     issue_batch_id TEXT REFERENCES issue_batches(id),
     authority TEXT NOT NULL,
@@ -280,6 +281,7 @@ const SCHEMA_SQL = `
 export interface SeedTender {
   id: string;
   tenderId: string;
+  referenceNo?: string | null;
   company: string;
   companyId: string;
   authority: string;
@@ -375,6 +377,7 @@ function migrateLifecycleColumns(database: DatabaseSync): void {
   const tenderInfo = database.prepare("PRAGMA table_info(tenders)").all() as Array<{ name: string; notnull: number }>;
   const tenderColumns = new Set(tenderInfo.map((column) => column.name));
   if (!tenderColumns.has("submission_at")) database.exec("ALTER TABLE tenders ADD COLUMN submission_at TEXT");
+  if (!tenderColumns.has("reference_no")) database.exec("ALTER TABLE tenders ADD COLUMN reference_no TEXT");
   migrateNullableTenderValues(database, tenderInfo);
   migrateNullableTenderCompany(database);
   const additions: Record<string, Array<[string, string]>> = {

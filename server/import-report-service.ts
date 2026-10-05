@@ -63,8 +63,10 @@ const normalizeRow = (raw: Record<string, unknown>): CreateTenderInput => {
   }
   const stage = text(output.stage);
   const status = text(output.status);
+  const refNo = text(output.referenceno || output.refno || output.referencenumber);
   return {
     tenderId: text(output.tenderid || output.tenderno || output.id),
+    referenceNo: refNo || undefined,
     company: text(output.company || output.companyname || output.contractor),
     authority: text(output.authority || output.organization || output.client),
     authorityZone: text(output.authorityzone || output.zone || output.region) || undefined,

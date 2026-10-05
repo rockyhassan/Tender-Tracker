@@ -6,6 +6,7 @@ import type { TenderRepository } from "./repository";
 type TenderRow = {
   id: string;
   tender_id: string;
+  reference_no: string | null;
   company_id: string | null;
   company_name: string | null;
   authority: string;
@@ -24,7 +25,7 @@ type TenderRow = {
 
 const TENDER_SELECT = `
   SELECT
-    t.id, t.tender_id, t.company_id, c.name AS company_name,
+    t.id, t.tender_id, t.reference_no, t.company_id, c.name AS company_name,
     t.authority, t.authority_zone, t.issue_batch_id, t.package_name,
     t.closing_at, t.submission_at, t.tender_value, t.submitted_value, t.stage, t.status,
     t.created_at, t.updated_at
@@ -41,6 +42,7 @@ const toIso = (val: unknown): string | undefined => {
 const toTender = (row: TenderRow): Tender => ({
   id: row.id,
   tenderId: row.tender_id,
+  referenceNo: row.reference_no ?? null,
   company: row.company_name ?? "Unassigned",
   companyId: row.company_id ?? undefined,
   authority: row.authority,
@@ -81,6 +83,10 @@ export class PgTenderRepository implements TenderRepository {
       params.push(contains(query.tenderId));
       clauses.push(`LOWER(t.tender_id) LIKE $${params.length} ESCAPE '\\'`);
     }
+    if (query.referenceNo) {
+      params.push(contains(query.referenceNo));
+      clauses.push(`LOWER(COALESCE(t.reference_no, '')) LIKE $${params.length} ESCAPE '\\'`);
+    }
     if (query.company) {
       params.push(contains(query.company));
       clauses.push(`LOWER(c.name) LIKE $${params.length} ESCAPE '\\'`);
@@ -107,7 +113,7 @@ export class PgTenderRepository implements TenderRepository {
     }
     if (query.q) {
       params.push(contains(query.q));
-      clauses.push(`LOWER(t.tender_id || ' ' || COALESCE(c.name, '') || ' ' || t.authority || ' ' || t.package_name) LIKE $${params.length}`);
+      clauses.push(`LOWER(t.tender_id || ' ' || COALESCE(t.reference_no, '') || ' ' || COALESCE(c.name, '') || ' ' || t.authority || ' ' || t.package_name) LIKE $${params.length}`);
     }
 
     const closingFrom = dateBoundary(query.closingFrom ?? query.closingDateFrom, false);
@@ -215,13 +221,14 @@ export class PgTenderRepository implements TenderRepository {
 
       await client.query(
         `INSERT INTO tenders
-          (id, tender_id, company_id, issue_batch_id, authority, authority_zone,
+          (id, tender_id, reference_no, company_id, issue_batch_id, authority, authority_zone,
            package_name, closing_at, submission_at, tender_value, submitted_value, stage, status,
            created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           id,
           tender.tenderId,
+          tender.referenceNo ?? null,
           companyId,
           tender.issueBatchId ?? null,
           tender.authority,
@@ -231,8 +238,8 @@ export class PgTenderRepository implements TenderRepository {
           tender.submissionAt ?? null,
           tender.tenderValue ?? null,
           tender.submittedValue ?? null,
-          tender.stage,
-          tender.status,
+          tender.stage ?? "New",
+          tender.status ?? "Active",
           now,
           now,
         ]
@@ -298,13 +305,14 @@ export class PgTenderRepository implements TenderRepository {
 
         await client.query(
           `INSERT INTO tenders
-            (id, tender_id, company_id, issue_batch_id, authority, authority_zone,
+            (id, tender_id, reference_no, company_id, issue_batch_id, authority, authority_zone,
              package_name, closing_at, submission_at, tender_value, submitted_value, stage, status,
              created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
           [
             id,
             tender.tenderId,
+            tender.referenceNo ?? null,
             companyId,
             tender.issueBatchId ?? null,
             tender.authority,
@@ -314,8 +322,8 @@ export class PgTenderRepository implements TenderRepository {
             tender.submissionAt ?? null,
             tender.tenderValue ?? null,
             tender.submittedValue ?? null,
-            tender.stage,
-            tender.status,
+            tender.stage ?? "New",
+            tender.status ?? "Active",
             now,
             now,
           ]
@@ -354,6 +362,7 @@ export class PgTenderRepository implements TenderRepository {
 
     const fields: Array<[string, any]> = [];
     if (changes.tenderId !== undefined) fields.push(["tender_id", changes.tenderId]);
+    if (changes.referenceNo !== undefined) fields.push(["reference_no", changes.referenceNo ?? null]);
     if (changes.authority !== undefined) fields.push(["authority", changes.authority]);
     if (changes.authorityZone !== undefined) fields.push(["authority_zone", changes.authorityZone]);
     if (changes.issueBatchId !== undefined) fields.push(["issue_batch_id", changes.issueBatchId]);

@@ -27,6 +27,7 @@ const clone = (tender: Tender): Tender => ({ ...tender });
 type TenderRow = {
   id: string;
   tender_id: string;
+  reference_no: string | null;
   company_id: string | null;
   company_name: string | null;
   authority: string;
@@ -45,7 +46,7 @@ type TenderRow = {
 
 const TENDER_SELECT = `
   SELECT
-    t.id, t.tender_id, t.company_id, c.name AS company_name,
+    t.id, t.tender_id, t.reference_no, t.company_id, c.name AS company_name,
     t.authority, t.authority_zone, t.issue_batch_id, t.package_name,
     t.closing_at, t.submission_at, t.tender_value, t.submitted_value, t.stage, t.status,
     t.created_at, t.updated_at
@@ -56,6 +57,7 @@ const TENDER_SELECT = `
 const toTender = (row: TenderRow): Tender => ({
   id: row.id,
   tenderId: row.tender_id,
+  referenceNo: row.reference_no ?? null,
   company: row.company_name ?? "Unassigned",
   companyId: row.company_id ?? undefined,
   authority: row.authority,
@@ -115,6 +117,10 @@ export class SqliteTenderRepository implements TenderRepository {
       clauses.push("LOWER(t.tender_id) LIKE ? ESCAPE '\\'");
       params.push(contains(query.tenderId));
     }
+    if (query.referenceNo) {
+      clauses.push("LOWER(COALESCE(t.reference_no, '')) LIKE ? ESCAPE '\\'");
+      params.push(contains(query.referenceNo));
+    }
     if (query.company) {
       clauses.push("LOWER(c.name) LIKE ? ESCAPE '\\'");
       params.push(contains(query.company));
@@ -140,7 +146,7 @@ export class SqliteTenderRepository implements TenderRepository {
       params.push(query.stage);
     }
     if (query.q) {
-      clauses.push("LOWER(t.tender_id || ' ' || COALESCE(c.name, '') || ' ' || t.authority || ' ' || t.package_name) LIKE ?");
+      clauses.push("LOWER(t.tender_id || ' ' || COALESCE(t.reference_no, '') || ' ' || COALESCE(c.name, '') || ' ' || t.authority || ' ' || t.package_name) LIKE ?");
       params.push(contains(query.q));
     }
     const closingFrom = dateBoundary(query.closingFrom ?? query.closingDateFrom, false);
@@ -216,13 +222,14 @@ export class SqliteTenderRepository implements TenderRepository {
       `).run(companyId, companyName, now, now);
       this.database.prepare(`
         INSERT INTO tenders
-          (id, tender_id, company_id, issue_batch_id, authority, authority_zone,
+          (id, tender_id, reference_no, company_id, issue_batch_id, authority, authority_zone,
            package_name, closing_at, submission_at, tender_value, submitted_value, stage, status,
            created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id,
         tender.tenderId,
+        tender.referenceNo ?? null,
         companyId,
         tender.issueBatchId ?? null,
         tender.authority,
@@ -232,8 +239,8 @@ export class SqliteTenderRepository implements TenderRepository {
         tender.submissionAt ?? null,
         tender.tenderValue ?? null,
         tender.submittedValue ?? null,
-        tender.stage,
-        tender.status,
+        tender.stage ?? "New",
+        tender.status ?? "Active",
         now,
         now,
       );
@@ -253,7 +260,7 @@ export class SqliteTenderRepository implements TenderRepository {
     try {
       const companyLookup = this.database.prepare("SELECT id, name FROM companies WHERE name = ? COLLATE NOCASE LIMIT 1");
       const companyInsert = this.database.prepare("INSERT INTO companies (id, name, created_at, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at");
-      const tenderInsert = this.database.prepare("INSERT INTO tenders (id, tender_id, company_id, issue_batch_id, authority, authority_zone, package_name, closing_at, submission_at, tender_value, submitted_value, stage, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      const tenderInsert = this.database.prepare("INSERT INTO tenders (id, tender_id, reference_no, company_id, issue_batch_id, authority, authority_zone, package_name, closing_at, submission_at, tender_value, submitted_value, stage, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       const batchCompanyCache = new Map<string, { id: string; name: string }>();
 
       tenders.forEach((tender, index) => {
@@ -283,7 +290,7 @@ export class SqliteTenderRepository implements TenderRepository {
         }
 
         if (companyId) companyInsert.run(companyId, companyName, now, now);
-        tenderInsert.run(id, tender.tenderId, companyId, tender.issueBatchId ?? null, tender.authority, tender.authorityZone ?? null, tender.packageName, tender.closingAt, tender.submissionAt ?? null, tender.tenderValue ?? null, tender.submittedValue ?? null, tender.stage, tender.status, now, now);
+        tenderInsert.run(id, tender.tenderId, tender.referenceNo ?? null, companyId, tender.issueBatchId ?? null, tender.authority, tender.authorityZone ?? null, tender.packageName, tender.closingAt, tender.submissionAt ?? null, tender.tenderValue ?? null, tender.submittedValue ?? null, tender.stage ?? "New", tender.status ?? "Active", now, now);
       });
       this.database.exec("COMMIT");
     } catch (error) {
@@ -314,6 +321,7 @@ export class SqliteTenderRepository implements TenderRepository {
 
     const fields: Array<[string, SQLOutputValue]> = [];
     if (changes.tenderId !== undefined) fields.push(["tender_id", changes.tenderId]);
+    if (changes.referenceNo !== undefined) fields.push(["reference_no", changes.referenceNo ?? null]);
     if (changes.authority !== undefined) fields.push(["authority", changes.authority]);
     if (changes.authorityZone !== undefined) fields.push(["authority_zone", changes.authorityZone]);
     if (changes.issueBatchId !== undefined) fields.push(["issue_batch_id", changes.issueBatchId]);

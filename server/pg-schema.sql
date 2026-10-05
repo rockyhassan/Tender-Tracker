@@ -99,6 +99,7 @@ CREATE INDEX IF NOT EXISTS issue_batches_company_id_idx ON issue_batches(company
 CREATE TABLE IF NOT EXISTS tenders (
   id TEXT PRIMARY KEY,
   tender_id TEXT NOT NULL,
+  reference_no TEXT,
   company_id TEXT REFERENCES companies(id),
   issue_batch_id TEXT REFERENCES issue_batches(id),
   authority TEXT NOT NULL,
@@ -113,6 +114,7 @@ CREATE TABLE IF NOT EXISTS tenders (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE tenders ADD COLUMN IF NOT EXISTS reference_no TEXT;
 CREATE INDEX IF NOT EXISTS tenders_company_id_idx ON tenders(company_id);
 CREATE INDEX IF NOT EXISTS tenders_status_idx ON tenders(status);
 CREATE INDEX IF NOT EXISTS tenders_stage_idx ON tenders(stage);

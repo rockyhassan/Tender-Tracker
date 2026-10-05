@@ -25,6 +25,7 @@ const toIso = (val: unknown): string | undefined => {
 const toTender = (row: any): Tender => ({
   id: row.id,
   tenderId: row.tender_id,
+  referenceNo: row.reference_no ?? null,
   company: row.company_name ?? "Unassigned",
   companyId: row.company_id ?? undefined,
   authority: row.authority,
@@ -42,7 +43,7 @@ const toTender = (row: any): Tender => ({
 });
 
 const tenderSelect = `
-  SELECT t.id, t.tender_id, t.company_id, c.name AS company_name,
+  SELECT t.id, t.tender_id, t.reference_no, t.company_id, c.name AS company_name,
          t.authority, t.authority_zone, t.issue_batch_id, t.package_name,
          t.closing_at, t.submission_at, t.tender_value, t.submitted_value,
          t.stage, t.status, t.created_at, t.updated_at
@@ -245,7 +246,7 @@ export class PgPurchaseSheetRepository implements PurchaseSheetRepository {
 
   private async lineRows(sheetId: string): Promise<Array<Tender & { lineCompanyId?: string }>> {
     const sql = `
-      SELECT t.id, t.tender_id, psl.company_id AS line_company_id, lc.name AS line_company_name,
+      SELECT t.id, t.tender_id, t.reference_no, psl.company_id AS line_company_id, lc.name AS line_company_name,
              t.company_id, c.name AS company_name, t.authority, t.authority_zone, t.issue_batch_id,
              t.package_name, t.closing_at, t.submission_at, t.tender_value, t.submitted_value,
              t.stage, t.status, t.created_at, t.updated_at

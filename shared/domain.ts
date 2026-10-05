@@ -23,7 +23,7 @@ export interface CompanySecuritySummary { id: string; name: string; code?: strin
 export interface IssueBatch { id: string; issueDate: string; authorityZone: string; authorityId?: string; authorityName?: string; reference?: string; notes?: string; status: IssueBatchStatus; createdAt?: string; updatedAt?: string; tenderCount?: number; purchaseSheetCount?: number; }
 export interface IssueBatchTenderRow { tenderId: string; packageName: string; closingAt: string; submissionAt?: string; tenderValue?: number; submittedValue?: number; stage: WorkflowStage; status: TenderStatus; }
 export interface IssueBatchWithTendersResult { batch: IssueBatch; tenders: Tender[]; }
-export interface Tender { id: string; tenderId: string; company: string; authority: string; packageName: string; closingAt: string; submissionAt?: string; tenderValue?: number; submittedValue?: number; stage: WorkflowStage; status: TenderStatus; companyId?: string; authorityZone?: string; issueBatchId?: string; createdAt?: string; updatedAt?: string; }
+export interface Tender { id: string; tenderId: string; referenceNo?: string | null; company: string; authority: string; packageName: string; closingAt: string; submissionAt?: string; tenderValue?: number; submittedValue?: number; stage: WorkflowStage; status: TenderStatus; companyId?: string; authorityZone?: string; issueBatchId?: string; createdAt?: string; updatedAt?: string; }
 export interface TenderSubmission { id: string; tenderId: string; submittedAt: string; submittedValue: number; submissionReference?: string; status?: EntityStatus; notes?: string; createdAt?: string; updatedAt?: string; }
 export interface PurchaseSheetLine { tenderId: string; companyId?: string; company: string; }
 export interface PurchaseSheetViewMetadata { mode: PurchaseSheetViewMode; lineCount: number; companyCount: number; companies: string[]; }
@@ -55,7 +55,7 @@ const optionalText = z.string().trim().optional();
 const optionalDate = isoDateTime.optional();
 
 const optionalMoney = z.preprocess((value) => value === "" || value === null || value === undefined ? undefined : typeof value === "string" ? Number(value) : value, nonNegativeMoney.optional());
-const tenderInputFields = { clientId: nonEmpty.optional(), tenderId: nonEmpty, company: optionalText, companyId: nonEmpty.optional(), authority: nonEmpty, authorityZone: nonEmpty.optional(), packageName: nonEmpty, closingAt: isoDateTime, submissionAt: optionalDate, tenderValue: optionalMoney, submittedValue: optionalMoney, issueBatchId: nonEmpty.optional(), stage: z.enum(workflowStages), status: z.enum(tenderStatuses) };
+const tenderInputFields = { clientId: nonEmpty.optional(), tenderId: nonEmpty, referenceNo: z.preprocess((val) => val === "" ? null : val, z.string().trim().nullable().optional()), company: optionalText, companyId: nonEmpty.optional(), authority: nonEmpty, authorityZone: nonEmpty.optional(), packageName: nonEmpty, closingAt: isoDateTime, submissionAt: optionalDate, tenderValue: optionalMoney, submittedValue: optionalMoney, issueBatchId: nonEmpty.optional(), stage: z.enum(workflowStages), status: z.enum(tenderStatuses) };
 export const createTenderSchema = z.object({ ...tenderInputFields, authority: z.preprocess((val) => val === undefined || val === null || (typeof val === "string" && !val.trim()) ? "Unassigned" : val, nonEmpty), stage: z.enum(workflowStages).default("New"), status: z.enum(tenderStatuses).default("Draft") });
 export const updateTenderSchema = z.object(tenderInputFields).partial();
 const queryDate = z.string().trim().min(1).refine((value) => !Number.isNaN(Date.parse(value)), { message: "Expected a valid date or date/time string" });
@@ -64,6 +64,7 @@ const tenderResultFilters = z.enum(["Won", "Win", "Lost", "Pending"]);
 export const tenderListQuerySchema = z.object({
   q: nonEmpty.optional(),
   tenderId: nonEmpty.optional(),
+  referenceNo: nonEmpty.optional(),
   company: nonEmpty.optional(),
   companyId: nonEmpty.optional(),
   authority: nonEmpty.optional(),

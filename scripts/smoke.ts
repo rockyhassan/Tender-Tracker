@@ -11,7 +11,7 @@ const databasePath = join(tmpdir(), `tender-tracker-smoke-${process.pid}.sqlite`
 const seededDatabasePath = join(tmpdir(), `tender-tracker-smoke-seeded-${process.pid}.sqlite`);
 const backupDirectory = join(tmpdir(), `tender-tracker-smoke-backups-${process.pid}`);
 
-type Tender = { id: string; tenderId: string; company: string; companyId?: string; packageName?: string; status: string; stage: string; submissionAt?: string; tenderValue?: number; submittedValue?: number };
+type Tender = { id: string; tenderId: string; referenceNo?: string | null; company: string; companyId?: string; packageName?: string; status: string; stage: string; submissionAt?: string; tenderValue?: number; submittedValue?: number };
 type ResponseBody = Record<string, unknown> | Tender | Tender[];
 
 const assert: (condition: unknown, message: string) => asserts condition = (condition, message) => {
@@ -102,6 +102,7 @@ try {
     method: "POST",
     body: JSON.stringify({
       tenderId: "SMOKE/2026/001",
+      referenceNo: "REF-PORTAL-SMOKE-01",
       company: "Smoke Works Ltd.",
       authority: "Test Authority",
       packageName: "SQLite persistence package",
@@ -114,14 +115,15 @@ try {
   assert(created.status === 201, `create returned ${created.status}`);
   const createdTender = created.body as Tender;
   assert(Boolean(createdTender.id), "create returned an id");
+  assert(createdTender.referenceNo === "REF-PORTAL-SMOKE-01", "create persists referenceNo");
 
   const blankTender = await request("/api/tenders", { method: "POST", body: JSON.stringify({ tenderId: "SMOKE/BLANK/001", company: "Blank Values Ltd.", authority: "Test Authority", packageName: "Value later package", closingAt: new Date(Date.now() + 30 * 86400000).toISOString() }) });
-  assert(blankTender.status === 201 && (blankTender.body as Tender).tenderValue === undefined && (blankTender.body as Tender).submittedValue === undefined, "initial tender creation accepts blank tender and submitted values without coercing to zero");
+  assert(blankTender.status === 201 && (blankTender.body as Tender).tenderValue === undefined && (blankTender.body as Tender).submittedValue === undefined && (blankTender.body as Tender).referenceNo === null, "initial tender creation accepts blank tender, submitted values, and null referenceNo without coercing to defaults");
   const blankId = (blankTender.body as Tender).id;
   const blankNegative = await request(`/api/tenders/${encodeURIComponent(blankId)}`, { method: "PATCH", body: JSON.stringify({ tenderValue: -1 }) });
   assert(blankNegative.status === 400, "negative tender value is rejected");
-  const blankUpdated = await request(`/api/tenders/${encodeURIComponent(blankId)}`, { method: "PATCH", body: JSON.stringify({ tenderValue: 456000, submittedValue: 455000 }) });
-  assert(blankUpdated.status === 200 && (blankUpdated.body as Tender).tenderValue === 456000 && (blankUpdated.body as Tender).submittedValue === 455000, "blank tender values can be added later through update");
+  const blankUpdated = await request(`/api/tenders/${encodeURIComponent(blankId)}`, { method: "PATCH", body: JSON.stringify({ tenderValue: 456000, submittedValue: 455000, referenceNo: "REF-PORTAL-ADDED" }) });
+  assert(blankUpdated.status === 200 && (blankUpdated.body as Tender).tenderValue === 456000 && (blankUpdated.body as Tender).submittedValue === 455000 && (blankUpdated.body as Tender).referenceNo === "REF-PORTAL-ADDED", "blank tender values and referenceNo can be added later through update");
 
   const automaticBackup = await request("/api/backup/automatic");
   assert(automaticBackup.status === 200 && (automaticBackup.body as { files?: string[]; retention?: number }).files?.length === 1 && (automaticBackup.body as { retention?: number }).retention === 2, "startup writes an automatic local backup with configured retention");
@@ -398,9 +400,9 @@ try {
 
   const updated = await request(`/api/tenders/${encodeURIComponent(createdTender.id)}`, {
     method: "PATCH",
-    body: JSON.stringify({ status: "Closed", packageName: "Updated package" }),
+    body: JSON.stringify({ status: "Closed", packageName: "Updated package", referenceNo: null }),
   });
-  assert(updated.status === 200 && (updated.body as Tender).status === "Closed", "patch updates tender");
+  assert(updated.status === 200 && (updated.body as Tender).status === "Closed" && (updated.body as Tender).referenceNo === null, "patch updates tender and clears referenceNo to null");
 
   await stopServer(server);
   server = undefined;
@@ -409,12 +411,14 @@ try {
   assert(restartUnlock.status === 200 && Boolean((restartUnlock.body as { token?: string }).token), "restarted server can unlock the protected configuration");
   sessionToken = (restartUnlock.body as { token: string }).token;
   const afterRestart = await request(`/api/tenders/${encodeURIComponent(createdTender.id)}`);
-  assert(afterRestart.status === 200 && (afterRestart.body as Tender).status === "Closed", "updated tender survives restart");
+  assert(afterRestart.status === 200 && (afterRestart.body as Tender).status === "Closed" && (afterRestart.body as Tender).referenceNo === null, "updated tender and cleared referenceNo survive restart");
   const atomicBatchAfterRestart = await request(`/api/issue-batches/${encodeURIComponent(atomicBatchId)}`);
   const atomicTendersAfterRestart = await request("/api/tenders?authorityZone=Smoke%20Zone");
   assert(atomicBatchAfterRestart.status === 200 && (atomicBatchAfterRestart.body as { tenderCount?: number }).tenderCount === 2 && atomicTendersAfterRestart.status === 200 && Array.isArray(atomicTendersAfterRestart.body) && (atomicTendersAfterRestart.body as Array<Tender>).filter((row) => row.tenderId.startsWith("SMOKE/ATOMIC/")).length === 2, "atomic batch and both tender rows survive restart");
   const blankAfterRestart = await request(`/api/tenders/${encodeURIComponent(blankId)}`);
-  assert(blankAfterRestart.status === 200 && (blankAfterRestart.body as Tender).tenderValue === 456000 && (blankAfterRestart.body as Tender).submittedValue === 455000, "nullable tender values survive restart");
+  assert(blankAfterRestart.status === 200 && (blankAfterRestart.body as Tender).tenderValue === 456000 && (blankAfterRestart.body as Tender).submittedValue === 455000 && (blankAfterRestart.body as Tender).referenceNo === "REF-PORTAL-ADDED", "nullable tender values and referenceNo survive restart");
+  const refNoFiltered = await request("/api/tenders?referenceNo=REF-PORTAL-ADDED");
+  assert(refNoFiltered.status === 200 && Array.isArray(refNoFiltered.body) && (refNoFiltered.body as Array<Tender>).some((t) => t.id === blankId), "filtering by referenceNo finds matching tender after restart");
   const soonAfterRestart = await request(`/api/tenders/${encodeURIComponent(soonTenderBody.id)}`);
   assert(soonAfterRestart.status === 200 && (soonAfterRestart.body as Tender).submissionAt === (persistedSoon.body as Tender).submissionAt, "submission deadline survives restart");
   const filteredAfterRestart = await request("/api/tenders?tenderId=SMOKE%2FFILTER%2F003&valueMin=500000&valueMax=500000");
