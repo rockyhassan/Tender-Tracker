@@ -439,7 +439,7 @@ export function NewIssueBatchWithTenders({
                 <option value="">Select saved authority</option>
                 {authorities.map((authority) => (
                   <option key={authority.id} value={authority.id}>
-                    {authority.name} · {authority.zone || "Zone not set"}
+                    {authority.name}
                   </option>
                 ))}
               </select>
