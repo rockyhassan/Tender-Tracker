@@ -38,6 +38,9 @@ importers:
       react-dom:
         specifier: latest
         version: 19.3.0(react@19.3.0)
+      tsx:
+        specifier: latest
+        version: 4.23.15
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -63,9 +66,6 @@ importers:
       '@types/react-dom':
         specifier: latest
         version: 19.3.0(@types/react@19.3.0)
-      tsx:
-        specifier: latest
-        version: 4.23.15
       typescript:
         specifier: latest
         version: 7.0.2
