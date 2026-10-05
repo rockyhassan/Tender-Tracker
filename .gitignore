@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+node_modules
+
+# Production build output
+dist/
+dist
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+*.local
+
+# Logs
+*.log
+
+# Temporary and local data
+.tmp/
+data/
+
+# SQLite and data artifacts
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/documents/
+data/backups/
+
+# System files
+.DS_Store
+

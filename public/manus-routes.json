@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"Dashboard"},{"path":"/tenders","title":"Tenders"},{"path":"/batches","title":"Issue Batches"},{"path":"/purchase-sheets","title":"Purchase Sheets"},{"path":"/companies","title":"Companies"},{"path":"/reports","title":"Reports"},{"path":"/settings","title":"Settings"}]}

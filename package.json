@@ -1,0 +1,48 @@
+{
+  "name": "tender-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "start": "tsx server/index.ts",
+    "server": "tsx server/index.ts",
+    "server:seed": "TENDER_DB_SEED=1 pnpm server",
+    "smoke": "tsx scripts/smoke.ts",
+    "verify:pg": "tsx scripts/verify-postgres.ts",
+    "test:storage": "tsx scripts/test-supabase-storage.ts",
+    "test:storage-api": "tsx scripts/test-document-api.ts",
+    "test:backup": "tsx scripts/test-backup-migration.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
+    "@vitejs/plugin-react": "latest",
+    "date-fns": "latest",
+    "drizzle-orm": "latest",
+    "express": "latest",
+    "lucide-react": "latest",
+    "pdfkit": "^0.20.2",
+    "pg": "^8.23.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "tsx": "latest",
+    "xlsx": "^0.18.5",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/express": "latest",
+    "@types/node": "latest",
+    "@types/pdfkit": "^0.17.6",
+    "@types/pg": "^8.23.1",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}
