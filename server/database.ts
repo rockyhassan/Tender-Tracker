@@ -1,6 +1,9 @@
 import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
+
+const require = createRequire(import.meta.url);
 
 export const DEFAULT_DATABASE_PATH = resolve(process.cwd(), "data/tender-tracker.sqlite");
 
@@ -327,7 +330,10 @@ export function openTenderDatabase(options: OpenDatabaseOptions = {}): DatabaseS
   const databasePath = options.path ?? process.env.TENDER_DB_PATH ?? DEFAULT_DATABASE_PATH;
   if (databasePath !== ":memory:") mkdirSync(dirname(resolve(databasePath)), { recursive: true });
 
-  const database = new DatabaseSync(databasePath);
+  const { DatabaseSync: DatabaseSyncClass } =
+    require("node:sqlite") as { DatabaseSync: typeof DatabaseSync };
+
+  const database = new DatabaseSyncClass(databasePath);
   database.exec(SCHEMA_SQL);
   migrateLifecycleColumns(database);
   if (options.seed) seedDatabase(database, options.seedTenders ?? defaultSeedTenders, options.seedCompanies ?? defaultSeedCompanies);
